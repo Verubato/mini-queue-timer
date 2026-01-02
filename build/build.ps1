@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$addonFolderName = "MiniQueueTime"
+$addonFolderName = "MiniQueueTimer"
 
 # remove any old remnants
 Remove-Item -Recurse $addonFolderName -ErrorAction SilentlyContinue
