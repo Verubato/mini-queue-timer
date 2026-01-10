@@ -1,5 +1,6 @@
-local addonName, _ = ...
-local loader
+local _, addon = ...
+---@type MiniFramework
+local mini = addon.Framework
 local frame
 local updateInterval = 0.25
 local emptyStreak = 0
@@ -11,34 +12,44 @@ local estimatedText
 local db
 local ticker
 local dbDefaults = {
+	Version = 2,
 	Point = "BOTTOM",
 	RelativeTo = "UIParent",
 	RelativePoint = "BOTTOM",
 	X = 0,
 	Y = 200,
-	Format = "%02d:%02d",
+	QueueFormat = "Time in queue: %02d:%02d",
+	EstimatedFormat = "Estimated: %02d:%02d",
 	FontPath = "Fonts\\FRIZQT__.TTF",
 	FontSize = 18,
 	FontFlags = "OUTLINE",
-	FontColor = { 1, 1, 1, 1 },
+	FontColor = {
+		R = 1,
+		G = 1,
+		B = 1,
+		A = 1,
+	},
 	PaddingX = 12,
 	PaddingY = 8,
 }
 
-local function CopyTable(src, dst)
-	if type(dst) ~= "table" then
-		dst = {}
-	end
+local function GetAndUpdatedDb()
+	db = mini:GetSavedVars(dbDefaults)
 
-	for k, v in pairs(src) do
-		if type(v) == "table" then
-			dst[k] = CopyTable(v, dst[k])
-		elseif dst[k] == nil then
-			dst[k] = v
+	while db.Version ~= dbDefaults.Version do
+		if not db.Version or db.Version == 1 then
+			db.Format = nil
+			db.FontColor = {
+				R = 1,
+				G = 1,
+				B = 1,
+				A = 1,
+			}
+			db.Version = 2
 		end
 	end
 
-	return dst
+	return db
 end
 
 local function ApplyPosition()
@@ -76,7 +87,7 @@ local function ResizeDraggableToText()
 	draggable:SetSize(w + (db.PaddingX or 0) * 2, h + (db.PaddingY or 0) * 2)
 end
 
-local function FormatTime(seconds)
+local function Format(seconds, format)
 	if not seconds or seconds < 0 then
 		return "Unknown"
 	end
@@ -86,7 +97,7 @@ local function FormatTime(seconds)
 	local m = math.floor(seconds / 60)
 	local s = seconds % 60
 
-	return string.format(db.Format or "%02d:%02d", m, s)
+	return string.format(format, m, s)
 end
 
 local function GetLongestPvPQueueElapsedSeconds()
@@ -177,10 +188,10 @@ local function ApplyFontStyle()
 	local r, g, b, a = 1, 1, 1, 1
 
 	if type(c) == "table" then
-		r = (type(c[1]) == "number") and c[1] or r
-		g = (type(c[2]) == "number") and c[2] or g
-		b = (type(c[3]) == "number") and c[3] or b
-		a = (type(c[4]) == "number") and c[4] or a
+		r = (type(c.R) == "number") and c.R or r
+		g = (type(c.G) == "number") and c.G or g
+		b = (type(c.B) == "number") and c.B or b
+		a = (type(c.A) == "number") and c.A or a
 	end
 
 	queueText:SetTextColor(r, g, b, a)
@@ -210,8 +221,8 @@ local function UpdateDisplay()
 	local isQueued = pvpQueued or pveQueued
 
 	if pvpSecs and pvpSecs >= (pveSecs or 0) then
-		queueText:SetText("Time in Queue: " .. FormatTime(pvpSecs))
-		estimatedText:SetText("Estimated time: " .. FormatTime(pvpEstimated))
+		queueText:SetText(Format(pvpSecs, db.QueueFormat))
+		estimatedText:SetText(Format(pvpEstimated, db.EstimatedFormat))
 
 		queueText:Show()
 		estimatedText:Show()
@@ -222,8 +233,8 @@ local function UpdateDisplay()
 	end
 
 	if pveSecs and pveSecs > 0 then
-		queueText:SetText("Time in Queue: " .. FormatTime(pveSecs))
-		estimatedText:SetText("Estimated time: " .. FormatTime(pveEstimated))
+		queueText:SetText(Format(pveSecs, db.QueueFormat))
+		estimatedText:SetText(Format(pveEstimated, db.EstimatedFormat))
 
 		queueText:Show()
 		estimatedText:Show()
@@ -261,9 +272,8 @@ local function EnsureTicker()
 	ticker = C_Timer.NewTicker(updateInterval, UpdateDisplay)
 end
 
-local function Init()
-	MiniQueueTimeDB = MiniQueueTimeDB or {}
-	db = CopyTable(dbDefaults, MiniQueueTimeDB)
+local function OnAddonLoaded()
+	db = GetAndUpdatedDb()
 
 	draggable = CreateFrame("Frame", nil, UIParent)
 	draggable:SetClampedToScreen(true)
@@ -314,15 +324,9 @@ local function Init()
 
 	frame:SetScript("OnEvent", function()
 		EnsureTicker()
+		ApplyFontStyle()
 		UpdateDisplay()
 	end)
 end
 
-loader = CreateFrame("Frame")
-loader:RegisterEvent("ADDON_LOADED")
-loader:SetScript("OnEvent", function(_, event, arg1)
-	if event == "ADDON_LOADED" and arg1 == addonName then
-		Init()
-		loader:SetScript("OnEvent", nil)
-	end
-end)
+mini:WaitForAddonLoad(OnAddonLoaded)

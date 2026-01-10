@@ -7,4 +7,5 @@
 ## SavedVariables: MiniQueueTimerDB
 ## X-Curse-Project-ID: 1418678
 
+MiniFramework.lua
 MiniQueueTimer.lua
