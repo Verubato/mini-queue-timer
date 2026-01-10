@@ -2,10 +2,14 @@ local addonName, _ = ...
 local loader
 local frame
 local updateInterval = 0.25
-local elapsedSinceUpdate = 0
+local emptyStreak = 0
+-- 8 * 0.25s = 2 seconds
+local stopAfterEmptyTicks = 8
 local draggable
-local text
+local queueText
+local estimatedText
 local db
+local ticker
 local dbDefaults = {
 	Point = "BOTTOM",
 	RelativeTo = "UIParent",
@@ -40,7 +44,7 @@ end
 local function ApplyPosition()
 	local point = db.Point or dbDefaults.Point
 	local relativePoint = db.RelativePoint or dbDefaults.RelativePoint
-	local relativeTo = (db.RelativeTo and _G["RelativeTo"]) or UIParent
+	local relativeTo = (db.RelativeTo and _G[db.RelativeTo]) or UIParent
 	local x = (type(db.X) == "number") and db.X or dbDefaults.X
 	local y = (type(db.Y) == "number") and db.Y or dbDefaults.Y
 
@@ -59,8 +63,8 @@ local function SavePosition()
 end
 
 local function ResizeDraggableToText()
-	local w = text:GetStringWidth() or 0
-	local h = text:GetStringHeight() or 0
+	local w = math.max(queueText:GetStringWidth() or 0, estimatedText:GetStringWidth() or 0)
+	local h = (queueText:GetStringHeight() or 0) + (estimatedText:GetStringHeight() or 0)
 
 	if w < 1 then
 		w = 1
@@ -73,6 +77,10 @@ local function ResizeDraggableToText()
 end
 
 local function FormatTime(seconds)
+	if not seconds or seconds < 0 then
+		return "Unknown"
+	end
+
 	seconds = math.floor(seconds or 0)
 
 	local m = math.floor(seconds / 60)
@@ -83,24 +91,29 @@ end
 
 local function GetLongestPvPQueueElapsedSeconds()
 	local maxSecs = nil
+	local estimated = nil
+	local isQueued = false
 	local maxQueues = MAX_BATTLEFIELD_QUEUES or 3
 
 	for i = 1, maxQueues do
 		local status = GetBattlefieldStatus(i)
 		if status == "queued" or status == "confirm" then
+			isQueued = true
+
 			local ms = GetBattlefieldTimeWaited(i)
+			local est = GetBattlefieldEstimatedWaitTime(i)
 
 			if type(ms) == "number" and ms > 0 then
 				local secs = ms / 1000
-
 				if (not maxSecs) or secs > maxSecs then
 					maxSecs = secs
+					estimated = (type(est) == "number") and (est / 1000) or nil
 				end
 			end
 		end
 	end
 
-	return maxSecs
+	return maxSecs, estimated, isQueued
 end
 
 local function GetLongestPvEQueueElapsedSeconds()
@@ -113,12 +126,15 @@ local function GetLongestPvEQueueElapsedSeconds()
 	if type(LE_LFG_CATEGORY_LFD) == "number" then
 		categories[#categories + 1] = LE_LFG_CATEGORY_LFD
 	end
+
 	if type(LE_LFG_CATEGORY_LFR) == "number" then
 		categories[#categories + 1] = LE_LFG_CATEGORY_LFR
 	end
+
 	if type(LE_LFG_CATEGORY_RF) == "number" then
 		categories[#categories + 1] = LE_LFG_CATEGORY_RF
 	end
+
 	if type(LE_LFG_CATEGORY_SCENARIO) == "number" then
 		categories[#categories + 1] = LE_LFG_CATEGORY_SCENARIO
 	end
@@ -128,28 +144,34 @@ local function GetLongestPvEQueueElapsedSeconds()
 	end
 
 	local maxSecs = nil
+	local estimated = nil
+	local isQueued = false
 
 	for _, category in ipairs(categories) do
 		local mode = GetLFGMode(category)
 		if mode == "queued" or mode == "proposal" or mode == "confirm" then
+			isQueued = true
+
 			local stats = { GetLFGQueueStats(category) }
+			local estWait = #stats >= 16 and stats[16]
 			local queueStarted = #stats >= 17 and stats[17]
 
-			if queueStarted then
+			if type(queueStarted) == "number" then
 				local timeInQueue = GetTime() - queueStarted
-
 				if (not maxSecs) or timeInQueue > maxSecs then
 					maxSecs = timeInQueue
+					estimated = estWait
 				end
 			end
 		end
 	end
 
-	return maxSecs
+	return maxSecs, estimated, isQueued
 end
 
 local function ApplyFontStyle()
-	text:SetFont(db.FontPath or "Fonts\\FRIZQT__.TTF", db.FontSize or 18, db.FontFlags or "OUTLINE")
+	queueText:SetFont(db.FontPath or "Fonts\\FRIZQT__.TTF", db.FontSize or 18, db.FontFlags or "OUTLINE")
+	estimatedText:SetFont(db.FontPath or "Fonts\\FRIZQT__.TTF", db.FontSize or 18, db.FontFlags or "OUTLINE")
 
 	local c = db.FontColor
 	local r, g, b, a = 1, 1, 1, 1
@@ -161,29 +183,82 @@ local function ApplyFontStyle()
 		a = (type(c[4]) == "number") and c[4] or a
 	end
 
-	text:SetTextColor(r, g, b, a)
+	queueText:SetTextColor(r, g, b, a)
+	estimatedText:SetTextColor(r, g, b, a)
+end
+
+local function StopTicker()
+	if ticker then
+		ticker:Cancel()
+		ticker = nil
+	end
 end
 
 local function UpdateDisplay()
 	if IsInInstance() then
-		text:SetText("")
-		text:Hide()
+		queueText:SetText("")
+		queueText:Hide()
+		estimatedText:SetText("")
+		estimatedText:Hide()
+		StopTicker()
+		emptyStreak = 0
 		return
 	end
 
-	local pvpSecs = GetLongestPvPQueueElapsedSeconds()
-	local pveSecs = GetLongestPvEQueueElapsedSeconds()
-	local secs = math.max(pvpSecs or 0, pveSecs or 0)
+	local pvpSecs, pvpEstimated, pvpQueued = GetLongestPvPQueueElapsedSeconds()
+	local pveSecs, pveEstimated, pveQueued = GetLongestPvEQueueElapsedSeconds()
+	local isQueued = pvpQueued or pveQueued
 
-	if secs and secs > 0 then
-		text:SetText("Time in Queue: " .. FormatTime(secs))
-		text:Show()
+	if pvpSecs and pvpSecs >= (pveSecs or 0) then
+		queueText:SetText("Time in Queue: " .. FormatTime(pvpSecs))
+		estimatedText:SetText("Estimated time: " .. FormatTime(pvpEstimated))
+
+		queueText:Show()
+		estimatedText:Show()
 
 		ResizeDraggableToText()
-	else
-		text:SetText("")
-		text:Hide()
+		emptyStreak = 0
+		return
 	end
+
+	if pveSecs and pveSecs > 0 then
+		queueText:SetText("Time in Queue: " .. FormatTime(pveSecs))
+		estimatedText:SetText("Estimated time: " .. FormatTime(pveEstimated))
+
+		queueText:Show()
+		estimatedText:Show()
+
+		ResizeDraggableToText()
+		emptyStreak = 0
+		return
+	end
+
+	-- No queue data yet or not queued
+	queueText:SetText("")
+	queueText:Hide()
+
+	estimatedText:SetText("")
+	estimatedText:Hide()
+
+	if isQueued then
+		emptyStreak = 0
+		return
+	end
+
+	emptyStreak = emptyStreak + 1
+
+	if emptyStreak >= stopAfterEmptyTicks then
+		StopTicker()
+		emptyStreak = 0
+	end
+end
+
+local function EnsureTicker()
+	if ticker then
+		return
+	end
+
+	ticker = C_Timer.NewTicker(updateInterval, UpdateDisplay)
 end
 
 local function Init()
@@ -207,14 +282,19 @@ local function Init()
 		SavePosition()
 	end)
 
-	text = draggable:CreateFontString(nil, "OVERLAY")
-	text:SetPoint("CENTER", draggable, "CENTER", 0, 0)
-	text:Hide()
+	queueText = draggable:CreateFontString(nil, "OVERLAY")
+	queueText:SetPoint("CENTER", draggable, "CENTER", 0, 0)
+	queueText:Hide()
+
+	estimatedText = draggable:CreateFontString(nil, "OVERLAY")
+	estimatedText:SetPoint("TOP", queueText, "BOTTOM", 0, queueText:GetStringHeight())
+	estimatedText:Hide()
 
 	-- must apply font before setting the text
 	ApplyFontStyle()
 
-	text:SetText("")
+	queueText:SetText("")
+	estimatedText:SetText("")
 
 	frame = CreateFrame("Frame")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -233,20 +313,8 @@ local function Init()
 	frame:RegisterEvent("LFG_ROLE_UPDATE")
 
 	frame:SetScript("OnEvent", function()
+		EnsureTicker()
 		UpdateDisplay()
-	end)
-
-	frame:SetScript("OnUpdate", function(_, delta)
-		if IsInInstance() then
-			return
-		end
-
-		elapsedSinceUpdate = elapsedSinceUpdate + delta
-
-		if elapsedSinceUpdate >= updateInterval then
-			elapsedSinceUpdate = 0
-			UpdateDisplay()
-		end
 	end)
 end
 
