@@ -3,7 +3,7 @@
 ## Notes: Shows the maximum elapsed PvP/PvE queue time on screen.
 ## Author: Verz
 ## Version: 1.1.0
-## IconTexture: Interface\AddOns\MiniQueueTimer\icon.blp
+## IconTexture: Interface\AddOns\MiniQueueTimer\Icon.blp
 ## SavedVariables: MiniQueueTimerDB
 ## X-Curse-Project-ID: 1418678
 
