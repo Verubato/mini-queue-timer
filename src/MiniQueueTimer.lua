@@ -104,7 +104,7 @@ local function GetLongestPvPQueueElapsedSeconds()
 	local maxSecs = nil
 	local estimated = nil
 	local isQueued = false
-	local maxQueues = MAX_BATTLEFIELD_QUEUES or 3
+	local maxQueues = MAX_BATTLEFIELD_QUEUES or (GetMaxBattlefieldID and GetMaxBattlefieldID()) or 3
 
 	for i = 1, maxQueues do
 		local status = GetBattlefieldStatus(i)
@@ -148,6 +148,10 @@ local function GetLongestPvEQueueElapsedSeconds()
 
 	if type(LE_LFG_CATEGORY_SCENARIO) == "number" then
 		categories[#categories + 1] = LE_LFG_CATEGORY_SCENARIO
+	end
+
+	if type(LE_LFG_CATEGORY_BATTLEFIELD) == "number" then
+		categories[#categories + 1] = LE_LFG_CATEGORY_BATTLEFIELD
 	end
 
 	if #categories == 0 then
