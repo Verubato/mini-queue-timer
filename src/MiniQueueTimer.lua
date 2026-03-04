@@ -211,6 +211,7 @@ local function UpdateDisplay()
 		queueText:Hide()
 		estimatedText:SetText("")
 		estimatedText:Hide()
+		draggable:EnableMouse(false)
 		StopTicker()
 		emptyStreak = 0
 		return
@@ -226,6 +227,7 @@ local function UpdateDisplay()
 
 		queueText:Show()
 		estimatedText:Show()
+		draggable:EnableMouse(true)
 
 		ResizeDraggableToText()
 		emptyStreak = 0
@@ -238,6 +240,7 @@ local function UpdateDisplay()
 
 		queueText:Show()
 		estimatedText:Show()
+		draggable:EnableMouse(true)
 
 		ResizeDraggableToText()
 		emptyStreak = 0
@@ -250,6 +253,7 @@ local function UpdateDisplay()
 
 	estimatedText:SetText("")
 	estimatedText:Hide()
+	draggable:EnableMouse(false)
 
 	if isQueued then
 		emptyStreak = 0
@@ -277,7 +281,7 @@ local function OnAddonLoaded()
 
 	draggable = CreateFrame("Frame", nil, UIParent)
 	draggable:SetClampedToScreen(true)
-	draggable:EnableMouse(true)
+	draggable:EnableMouse(false)
 	draggable:SetMovable(true)
 	draggable:RegisterForDrag("LeftButton")
 
