@@ -11,6 +11,8 @@ local queueText
 local estimatedText
 local db
 local ticker
+local testMode = false
+local testModeStart = 0
 local dbDefaults = {
 	Version = 2,
 	Point = "BOTTOM",
@@ -32,6 +34,7 @@ local dbDefaults = {
 	PaddingX = 12,
 	PaddingY = 8,
 }
+addon.dbDefaults = dbDefaults
 
 local function GetAndUpdatedDb()
 	db = mini:GetSavedVars(dbDefaults)
@@ -210,6 +213,19 @@ local function StopTicker()
 end
 
 local function UpdateDisplay()
+	ApplyFontStyle()
+
+	if testMode then
+		local elapsed = GetTime() - testModeStart
+		queueText:SetText(Format(elapsed, db.QueueFormat))
+		estimatedText:SetText(Format(300, db.EstimatedFormat))
+		queueText:Show()
+		estimatedText:Show()
+		draggable:EnableMouse(true)
+		ResizeDraggableToText()
+		return
+	end
+
 	if IsInInstance() then
 		queueText:SetText("")
 		queueText:Hide()
@@ -280,8 +296,30 @@ local function EnsureTicker()
 	ticker = C_Timer.NewTicker(updateInterval, UpdateDisplay)
 end
 
+function addon:Refresh()
+	UpdateDisplay()
+end
+
 local function OnAddonLoaded()
 	db = GetAndUpdatedDb()
+	addon.db = db
+
+	addon.IsTestMode = function() return testMode end
+	addon.SetTestMode = function(active)
+		testMode = active
+		if active then
+			testModeStart = GetTime()
+			UpdateDisplay()
+			EnsureTicker()
+		else
+			StopTicker()
+			queueText:SetText("")
+			queueText:Hide()
+			estimatedText:SetText("")
+			estimatedText:Hide()
+			draggable:EnableMouse(false)
+		end
+	end
 
 	draggable = CreateFrame("Frame", nil, UIParent)
 	draggable:SetClampedToScreen(true)
@@ -332,7 +370,6 @@ local function OnAddonLoaded()
 
 	frame:SetScript("OnEvent", function()
 		EnsureTicker()
-		ApplyFontStyle()
 		UpdateDisplay()
 	end)
 end
