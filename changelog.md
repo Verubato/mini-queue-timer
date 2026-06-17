@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+12.0.7 TOC bump.
+
 ## 1.3.0
 
 Added config screen.
