@@ -60,7 +60,6 @@ local function BuildContent(panel)
 	local header = mini:PanelHeader({
 		Parent = panel,
 		Description = "Shows how long you've been in the queue, and the estimated wait.",
-		X = insetX,
 		Y = insetY,
 	})
 
