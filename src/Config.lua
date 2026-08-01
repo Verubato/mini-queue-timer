@@ -54,13 +54,11 @@ local function BuildContent(panel)
 	local db = addon.db
 	local gap = 12
 	local insetX = 16
-	local insetY = -16
 	local fontItems, fontNames = GetFontLists()
 
 	local header = mini:PanelHeader({
 		Parent = panel,
 		Description = "Shows how long you've been in the queue, and the estimated wait.",
-		Y = insetY,
 	})
 
 	-- Font
