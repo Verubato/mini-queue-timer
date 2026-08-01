@@ -55,27 +55,6 @@ local function GetAndUpdatedDb()
 	return db
 end
 
-local function ApplyPosition()
-	local point = db.Point or dbDefaults.Point
-	local relativePoint = db.RelativePoint or dbDefaults.RelativePoint
-	local relativeTo = (db.RelativeTo and _G[db.RelativeTo]) or UIParent
-	local x = (type(db.X) == "number") and db.X or dbDefaults.X
-	local y = (type(db.Y) == "number") and db.Y or dbDefaults.Y
-
-	draggable:ClearAllPoints()
-	draggable:SetPoint(point, relativeTo, relativePoint, x, y)
-end
-
-local function SavePosition()
-	local point, relativeTo, relativePoint, x, y = draggable:GetPoint(1)
-
-	db.Point = point
-	db.RelativeTo = relativeTo
-	db.RelativePoint = relativePoint
-	db.X = x
-	db.Y = y
-end
-
 local function ResizeDraggableToText()
 	local w = math.max(queueText:GetStringWidth() or 0, estimatedText:GetStringWidth() or 0)
 	local h = (queueText:GetStringHeight() or 0) + (estimatedText:GetStringHeight() or 0)
@@ -322,21 +301,12 @@ local function OnAddonLoaded()
 	end
 
 	draggable = CreateFrame("Frame", nil, UIParent)
-	draggable:SetClampedToScreen(true)
+
+	mini:MakeMovable(draggable, db)
+	mini:ApplyPosition(draggable, db, dbDefaults)
+
+	-- only accepts the mouse while a queue timer is actually on screen
 	draggable:EnableMouse(false)
-	draggable:SetMovable(true)
-	draggable:RegisterForDrag("LeftButton")
-
-	ApplyPosition()
-
-	draggable:SetScript("OnDragStart", function(self)
-		self:StartMoving()
-	end)
-
-	draggable:SetScript("OnDragStop", function(self)
-		self:StopMovingOrSizing()
-		SavePosition()
-	end)
 
 	queueText = draggable:CreateFontString(nil, "OVERLAY")
 	queueText:SetPoint("CENTER", draggable, "CENTER", 0, 0)
