@@ -18,6 +18,15 @@ local builtinFontNames = {
 	["Fonts\\MYRIADPRO-BOLD.TTF"] = "Myriad Pro",
 }
 
+local fontFlagItems = { "OUTLINE", "THICKOUTLINE", "MONOCHROME", "" }
+
+local fontFlagNames = {
+	OUTLINE      = "Outline",
+	THICKOUTLINE = "Thick Outline",
+	MONOCHROME   = "Monochrome",
+	[""]         = "None",
+}
+
 local function GetFontLists()
 	local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 
@@ -40,15 +49,6 @@ local function GetFontLists()
 
 	return builtinFontItems, builtinFontNames
 end
-
-local fontFlagItems = { "OUTLINE", "THICKOUTLINE", "MONOCHROME", "" }
-
-local fontFlagNames = {
-	OUTLINE      = "Outline",
-	THICKOUTLINE = "Thick Outline",
-	MONOCHROME   = "Monochrome",
-	[""]         = "None",
-}
 
 local function BuildContent(panel)
 	local db = addon.db
