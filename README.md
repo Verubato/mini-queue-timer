@@ -10,7 +10,7 @@ Feedback and feature requests are more than welcome!
 
 ## Screenshots
 
-![MiniQueueTimer screenshot](https://media.forgecdn.net/attachments/1459/919/screenshot-png.png)
+![MiniQueueTimer screenshot](https://raw.githubusercontent.com/Verubato/mini-queue-timer/main/assets/Screenshot.png)
 
 ## Download
 
