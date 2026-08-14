@@ -11,9 +11,9 @@ disappears otherwise. It is hidden entirely while inside an instance.
 
 | Item | Value |
 | --- | --- |
-| Version | 1.4.3 |
+| Version | 1.4.4 |
 | Author | Verz |
-| Interface versions (TOC) | 120100, 120007, 50504, 40402, 38002, 38000, 30405, 30300, 20506, 11509 |
+| Interface versions (TOC) | 120100, 50504, 40402, 38002, 38000, 30405, 30300, 20506, 11509 |
 | Saved variables | MiniQueueTimerDB |
 | Slash commands | /mqt, /miniqueuetimer, /miniqt (all open the settings panel) |
 | Options location | Game options -> AddOns -> MiniQueueTimer |
