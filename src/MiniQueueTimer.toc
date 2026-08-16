@@ -1,6 +1,7 @@
 ## Interface: 120100, 50504, 40402, 38002, 38000, 30405, 30300, 20506, 11509
 ## Title: MiniQueueTimer
 ## Notes: Shows the maximum elapsed PvP/PvE queue time on screen.
+## Category: Mini
 ## Author: Verz
 ## Version: 1.4.4
 ## IconTexture: Interface\AddOns\MiniQueueTimer\Icon.blp
