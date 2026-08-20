@@ -6,6 +6,8 @@ local updateInterval = 0.25
 local emptyStreak = 0
 -- 8 * 0.25s = 2 seconds
 local stopAfterEmptyTicks = 8
+-- The LFG categories this client has, resolved on first use.
+local lfgCategories
 local draggable
 local queueText
 local estimatedText
@@ -109,32 +111,38 @@ local function GetLongestPvPQueueElapsedSeconds()
 	return maxSecs, estimated, isQueued
 end
 
+---The LFG categories this client exposes. Which constants exist is fixed for the session, so
+---the list is worked out once instead of on every tick.
+local function GetLfgCategories()
+	if lfgCategories then
+		return lfgCategories
+	end
+
+	lfgCategories = {}
+
+	local names = {
+		LE_LFG_CATEGORY_LFD,
+		LE_LFG_CATEGORY_LFR,
+		LE_LFG_CATEGORY_RF,
+		LE_LFG_CATEGORY_SCENARIO,
+		LE_LFG_CATEGORY_BATTLEFIELD,
+	}
+
+	for i = 1, 5 do
+		if type(names[i]) == "number" then
+			lfgCategories[#lfgCategories + 1] = names[i]
+		end
+	end
+
+	return lfgCategories
+end
+
 local function GetLongestPvEQueueElapsedSeconds()
 	if type(GetLFGMode) ~= "function" or type(GetLFGQueueStats) ~= "function" then
 		return nil
 	end
 
-	local categories = {}
-
-	if type(LE_LFG_CATEGORY_LFD) == "number" then
-		categories[#categories + 1] = LE_LFG_CATEGORY_LFD
-	end
-
-	if type(LE_LFG_CATEGORY_LFR) == "number" then
-		categories[#categories + 1] = LE_LFG_CATEGORY_LFR
-	end
-
-	if type(LE_LFG_CATEGORY_RF) == "number" then
-		categories[#categories + 1] = LE_LFG_CATEGORY_RF
-	end
-
-	if type(LE_LFG_CATEGORY_SCENARIO) == "number" then
-		categories[#categories + 1] = LE_LFG_CATEGORY_SCENARIO
-	end
-
-	if type(LE_LFG_CATEGORY_BATTLEFIELD) == "number" then
-		categories[#categories + 1] = LE_LFG_CATEGORY_BATTLEFIELD
-	end
+	local categories = GetLfgCategories()
 
 	if #categories == 0 then
 		return nil
@@ -149,9 +157,8 @@ local function GetLongestPvEQueueElapsedSeconds()
 		if mode == "queued" or mode == "proposal" or mode == "confirm" then
 			isQueued = true
 
-			local stats = { GetLFGQueueStats(category) }
-			local estWait = #stats >= 16 and stats[16]
-			local queueStarted = #stats >= 17 and stats[17]
+			-- 16 and 17 are myWait and queuedTime.
+			local estWait, queueStarted = select(16, GetLFGQueueStats(category))
 
 			if type(queueStarted) == "number" then
 				local timeInQueue = GetTime() - queueStarted
@@ -192,8 +199,6 @@ local function StopTicker()
 end
 
 local function UpdateDisplay()
-	ApplyFontStyle()
-
 	if testMode then
 		local elapsed = GetTime() - testModeStart
 		queueText:SetText(Format(elapsed, db.QueueFormat))
@@ -276,6 +281,8 @@ local function EnsureTicker()
 end
 
 function addon:Refresh()
+	-- Fonts only move when the config does, and this is the path a config change takes.
+	ApplyFontStyle()
 	UpdateDisplay()
 end
 
