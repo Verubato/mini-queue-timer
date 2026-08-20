@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6
+
+Reduced CPU use while a queue timer is on screen.
+
 ## 1.4.5
 
 Added a Mini category so the addon groups with the other Mini addons in the addon list.
