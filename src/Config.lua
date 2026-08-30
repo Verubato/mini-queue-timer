@@ -70,7 +70,7 @@ local function BuildContent(panel)
 	fontDiv:SetPoint("RIGHT", panel, "RIGHT", -insetX, 0)
 
 	-- Font path
-	local fontPathLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	local fontPathLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	fontPathLabel:SetText("Font")
 	fontPathLabel:SetPoint("TOPLEFT", fontDiv, "BOTTOMLEFT", 0, -gap)
 
@@ -88,7 +88,7 @@ local function BuildContent(panel)
 	fontPathDd:SetWidth(240)
 
 	-- Font flags (same row, right of font path)
-	local fontFlagsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	local fontFlagsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	fontFlagsLabel:SetText("Outline")
 	fontFlagsLabel:SetPoint("TOP", fontPathLabel, "TOP", 0, 0)
 	fontFlagsLabel:SetPoint("LEFT", fontPathDd, "RIGHT", gap * 2, 0)
@@ -124,14 +124,15 @@ local function BuildContent(panel)
 	})
 	sizeResult.Slider:SetPoint("TOPLEFT", fontPathDd, "BOTTOMLEFT", 0, -36)
 
-	-- Font color
-	local colorLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	colorLabel:SetText("Font Color")
-	colorLabel:SetPoint("TOPLEFT", sizeResult.Slider, "BOTTOMLEFT", 0, -gap)
+	-- Font colour
+	local colorLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	colorLabel:SetText("Font Colour")
+	-- The slider's min/max numbers sit below its own frame, so a single gap crowds them.
+	colorLabel:SetPoint("TOPLEFT", sizeResult.Slider, "BOTTOMLEFT", 0, -gap * 2)
 
 	local colorBtn = mini:ColorSwatch({
 		Parent = panel,
-		Tooltip = "Click to change the font color.",
+		Tooltip = "Click to change the font colour.",
 		GetValue = function()
 			local c = db.FontColor
 			return c.R, c.G, c.B, c.A
@@ -231,6 +232,7 @@ mini:WaitForAddonLoad(function()
 	panel.name = "MiniQueueTimer"
 
 	BuildContent(panel)
+	addon.ConfigPanel = panel
 
 	panel:HookScript("OnShow", function()
 		if panel.MiniRefresh then
