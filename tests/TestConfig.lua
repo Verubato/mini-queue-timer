@@ -66,4 +66,29 @@ fw.describe("MiniQueueTimer - config panel", function()
 		acceptBtn:Click()
 		fw.eq(context.Addon.db.FontSize, context.Addon.dbDefaults.FontSize, "accepting applied the defaults")
 	end)
+
+	fw.it("left-aligns the Queue Text and Estimated captions with their edit boxes", function()
+		local queueLabel = FindChildText(panel, "Queue Text")
+		local estLabel = FindChildText(panel, "Estimated Text")
+		local queueBox = FindChildText(panel, context.Addon.db.QueueFormat)
+		local estBox = FindChildText(panel, context.Addon.db.EstimatedFormat)
+
+		fw.not_nil(queueLabel, "fixture: queue label found")
+		fw.not_nil(estLabel, "fixture: estimated label found")
+		fw.not_nil(queueBox, "fixture: queue box found")
+		fw.not_nil(estBox, "fixture: estimated box found")
+
+		local _, _, _, queueLabelX = queueLabel:GetPoint()
+		local _, _, _, estLabelX = estLabel:GetPoint()
+		local _, _, _, queueBoxX = queueBox:GetPoint()
+		local _, _, _, estBoxX = estBox:GetPoint()
+
+		-- Both boxes' flattened field bleeds ~5px past their own frame's left edge, so both
+		-- nudge 4px right of their label to line their visible edge up with it.
+		fw.eq(queueBoxX, 4, "queue box nudges right to line up with its label")
+		fw.eq(estBoxX, 4, "estimated box nudges right to line up with its label")
+
+		-- Both labels then share the same left edge as each other.
+		fw.eq(queueLabelX, estLabelX + 4, "the two captions line up with each other")
+	end)
 end)

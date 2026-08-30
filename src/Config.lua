@@ -177,7 +177,9 @@ local function BuildContent(panel)
 	})
 	local queueLabel, queueBox = queueEdit.Label, queueEdit.EditBox
 	queueLabel:SetPoint("TOPLEFT", textDiv, "BOTTOMLEFT", 0, -gap)
-	queueBox:SetPoint("TOPLEFT", queueLabel, "BOTTOMLEFT", 0, -4)
+	-- The flattened field's border bleeds ~5px left of the box's own frame, so a 4px nudge
+	-- lines its visible left edge up with the label above it.
+	queueBox:SetPoint("TOPLEFT", queueLabel, "BOTTOMLEFT", 4, -4)
 
 	-- Estimated format
 	local estEdit = mini:EditBox({
@@ -192,8 +194,10 @@ local function BuildContent(panel)
 		end,
 	})
 	local estLabel, estBox = estEdit.Label, estEdit.EditBox
-	estLabel:SetPoint("TOPLEFT", queueBox, "BOTTOMLEFT", 0, -gap)
-	estBox:SetPoint("TOPLEFT", estLabel, "BOTTOMLEFT", 0, -4)
+	-- queueBox sits 4px right of queueLabel, so the same 4px is backed out here to keep
+	-- estLabel under queueLabel rather than under queueBox.
+	estLabel:SetPoint("TOPLEFT", queueBox, "BOTTOMLEFT", -4, -gap)
+	estBox:SetPoint("TOPLEFT", estLabel, "BOTTOMLEFT", 4, -4)
 
 	-- Test
 	local testBtn, RefreshTestBtn
