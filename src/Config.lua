@@ -51,6 +51,9 @@ local function GetFontLists()
 end
 
 local function BuildContent(panel)
+	-- A styled button clashes with the stock Blizzard art around it in the settings screen.
+	mini:SetCustomStyling(true, { Button = false })
+
 	local db = addon.db
 	local gap = 12
 	local insetX = 16
@@ -186,34 +189,41 @@ local function BuildContent(panel)
 	estBox:SetPoint("TOPLEFT", estLabel, "BOTTOMLEFT", 0, -4)
 
 	-- Preview / Reset
-	local previewBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	previewBtn:SetSize(120, 24)
+	local previewBtn, RefreshPreviewBtn
+
+	previewBtn = mini:Button({
+		Parent = panel,
+		Width = 120,
+		Height = 24,
+		OnClick = function()
+			if addon.SetTestMode then
+				addon.SetTestMode(not addon.IsTestMode())
+			end
+			RefreshPreviewBtn()
+		end,
+	})
 	previewBtn:SetPoint("TOPLEFT", estBox, "BOTTOMLEFT", -3, -gap * 2)
 
-	local function RefreshPreviewBtn()
+	RefreshPreviewBtn = function()
 		local active = addon.IsTestMode and addon.IsTestMode()
 		previewBtn:SetText(active and "Preview: On" or "Preview: Off")
 	end
 	RefreshPreviewBtn()
 
-	previewBtn:SetScript("OnClick", function()
-		if addon.SetTestMode then
-			addon.SetTestMode(not addon.IsTestMode())
-		end
-		RefreshPreviewBtn()
-	end)
-
-	local resetBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	resetBtn:SetSize(120, 24)
-	resetBtn:SetText("Reset Defaults")
+	local resetBtn = mini:Button({
+		Parent = panel,
+		Text = "Reset Defaults",
+		Width = 120,
+		Height = 24,
+		OnClick = function()
+			mini:ResetSavedVars(addon.dbDefaults)
+			addon:Refresh()
+			if panel.MiniRefresh then
+				panel:MiniRefresh()
+			end
+		end,
+	})
 	resetBtn:SetPoint("LEFT", previewBtn, "RIGHT", gap, 0)
-	resetBtn:SetScript("OnClick", function()
-		mini:ResetSavedVars(addon.dbDefaults)
-		addon:Refresh()
-		if panel.MiniRefresh then
-			panel:MiniRefresh()
-		end
-	end)
 end
 
 mini:WaitForAddonLoad(function()
