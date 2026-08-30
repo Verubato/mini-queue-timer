@@ -62,6 +62,13 @@ local function BuildContent(panel)
 	local header = mini:PanelHeader({
 		Parent = panel,
 		Description = "Shows how long you've been in the queue, and the estimated wait.",
+		Test = {
+			OnClick = function()
+				if addon.SetTestMode then
+					addon.SetTestMode(not addon.IsTestMode())
+				end
+			end,
+		},
 		Reset = {
 			OnAccept = function()
 				mini:ResetSavedVars(addon.dbDefaults)
@@ -198,28 +205,6 @@ local function BuildContent(panel)
 	-- estLabel under queueLabel rather than under queueBox.
 	estLabel:SetPoint("TOPLEFT", queueBox, "BOTTOMLEFT", -4, -gap)
 	estBox:SetPoint("TOPLEFT", estLabel, "BOTTOMLEFT", 4, -4)
-
-	-- Test
-	local testBtn, RefreshTestBtn
-
-	testBtn = mini:Button({
-		Parent = panel,
-		Width = 120,
-		Height = 24,
-		OnClick = function()
-			if addon.SetTestMode then
-				addon.SetTestMode(not addon.IsTestMode())
-			end
-			RefreshTestBtn()
-		end,
-	})
-	testBtn:SetPoint("TOPLEFT", estBox, "BOTTOMLEFT", -3, -gap * 2)
-
-	RefreshTestBtn = function()
-		local active = addon.IsTestMode and addon.IsTestMode()
-		testBtn:SetText(active and "Test: On" or "Test: Off")
-	end
-	RefreshTestBtn()
 end
 
 mini:WaitForAddonLoad(function()
