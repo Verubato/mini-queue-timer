@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.7
+
+- UI improvements.
+- Fixed reset not moving the display back.
+- Added font previews to the font dropdown.
+
 ## 1.4.6
 
 Reduced CPU use while a queue timer is on screen.

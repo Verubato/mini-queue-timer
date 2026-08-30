@@ -41,7 +41,7 @@ disappears otherwise. It is hidden entirely while inside an instance.
 - Drag the text with the left mouse button to move it; the position is saved.
   Default position is bottom center of the screen, 200 px up.
 - The frame only accepts the mouse while the timer text is visible, so to
-  reposition it without being in a queue, turn on Preview first.
+  reposition it without being in a queue, click Test first.
 - There is no lock option.
 
 ## Settings
@@ -52,10 +52,10 @@ Single options panel with two sections plus two buttons.
 
 | Setting | Type | Default | Range / options | Notes |
 | --- | --- | --- | --- | --- |
-| Font | dropdown | Friz Quadrata | All LibSharedMedia fonts; falls back to 5 built-in fonts (Friz Quadrata, Arial Narrow, Morpheus, Skurri, Myriad Pro) | Applied to both text lines. |
+| Font | dropdown | Friz Quadrata | All LibSharedMedia fonts; falls back to 5 built-in fonts (Friz Quadrata, Arial Narrow, Morpheus, Skurri, Myriad Pro) | Applied to both text lines. Each dropdown row previews the font it names. |
 | Outline | dropdown | Outline | Outline, Thick Outline, Monochrome, None | |
 | Font Size | slider | 18 | 8-64 | |
-| Font Color | color swatch | white (1, 1, 1, 1) | any color + alpha | Label reads "Font Color (click to change)". |
+| Font Colour | color swatch | white (1, 1, 1, 1) | any color + alpha | Label reads "Font Colour (click to change)". |
 
 ### Text section
 
@@ -66,11 +66,14 @@ Single options panel with two sections plus two buttons.
 
 ### Buttons
 
-- Preview ("Preview: Off" / "Preview: On"): toggles a fake timer so the text can be
-  styled and dragged without queueing. The elapsed time counts up from when preview
-  was enabled and the estimated line shows a fixed 5:00.
-- Reset Defaults: resets all settings in MiniQueueTimerDB to defaults immediately
-  (no confirmation prompt).
+Both buttons sit at the top right of the panel, Test to the left of Reset to Defaults.
+
+- Test: toggles a fake timer so the text can be styled and dragged without queueing.
+  The elapsed time counts up from when it was turned on and the estimated line shows
+  a fixed 5:00. Click again to turn it off.
+- Reset to Defaults: asks "Reset every setting back to its default? This cannot be
+  undone." with Reset/Cancel buttons. Accepting resets all settings in
+  MiniQueueTimerDB to defaults and moves the display back to its default position.
 
 ## Version-gated behavior
 
@@ -85,7 +88,7 @@ Single options panel with two sections plus two buttons.
 | Symptom | Likely cause |
 | --- | --- |
 | No timer shows while queued | You are inside an instance: the display is hidden by design in instances. Otherwise the queue API has not reported an elapsed time yet; it appears once the wait time is greater than zero. |
-| Timer not visible and I want to move it | The frame is only draggable while text is showing. Enable the Preview button in the options, drag the text, then turn Preview off. |
+| Timer not visible and I want to move it | The frame is only draggable while text is showing. Click Test at the top of the options panel, drag the text, then click Test again to turn it off. |
 | Estimated line says "Unknown" | The client has not provided an estimated wait for that queue. Normal for some queue types. |
 | Only my PvP queue shows, not the dungeon queue | The longest elapsed queue wins; also on Classic-style clients without the LFG API, PvE queues are not tracked. |
 | Timer vanished mid-queue | The timer hides when it stops receiving queue data (for example the queue popped or was left) and also on entering an instance. |
