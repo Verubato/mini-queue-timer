@@ -1,4 +1,4 @@
-local _, addon = ...
+local addonName, addon = ...
 ---@type MiniFramework
 local mini = addon.Framework
 local frame
@@ -281,6 +281,8 @@ local function EnsureTicker()
 end
 
 function addon:Refresh()
+	-- The reset restores the default anchor, and nothing else re-applies it.
+	mini:ApplyPosition(draggable, db, dbDefaults)
 	-- Fonts only move when the config does, and this is the path a config change takes.
 	ApplyFontStyle()
 	UpdateDisplay()
@@ -307,7 +309,7 @@ local function OnAddonLoaded()
 		end
 	end
 
-	draggable = CreateFrame("Frame", nil, UIParent)
+	draggable = CreateFrame("Frame", addonName .. "Frame", UIParent)
 
 	mini:MakeMovable(draggable, db)
 	mini:ApplyPosition(draggable, db, dbDefaults)

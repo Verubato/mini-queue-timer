@@ -184,6 +184,36 @@ fw.describe("MiniQueueTimer - config panel", function()
 		fw.eq(context.Addon.db.FontSize, context.Addon.dbDefaults.FontSize, "accepting applied the defaults")
 	end)
 
+	fw.it("sends the display back to its default position when settings are reset", function()
+		local displayFrame = _G["MiniQueueTimerFrame"]
+		local defaults = context.Addon.dbDefaults
+		local db = context.Addon.db
+
+		fw.not_nil(displayFrame, "fixture: the display frame is exposed for tests")
+
+		displayFrame:ClearAllPoints()
+		displayFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 350, -75)
+		db.Point = "TOPLEFT"
+		db.RelativePoint = "TOPLEFT"
+		db.RelativeTo = "UIParent"
+		db.X = 350
+		db.Y = -75
+
+		local resetBtn = FindChildText(panel, "Reset to Defaults")
+		local seen = CaptureConfirm(function()
+			resetBtn:Click()
+		end)
+
+		StaticPopupDialogs[seen.Which].OnAccept(nil, seen.Data)
+
+		local point, _, relativePoint, x, y = displayFrame:GetPoint(1)
+
+		fw.eq(x, defaults.X, "reset put the display back at its default x")
+		fw.eq(y, defaults.Y, "reset put the display back at its default y")
+		fw.eq(point, defaults.Point, "reset put the display back on its default anchor point")
+		fw.eq(relativePoint, defaults.RelativePoint, "reset put the display back on its default relative point")
+	end)
+
 	fw.it("left-aligns the Queue Text and Estimated captions with their edit boxes", function()
 		local queueLabel = FindChildText(panel, "Queue Text")
 		local estLabel = FindChildText(panel, "Estimated Text")
