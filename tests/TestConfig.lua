@@ -13,6 +13,14 @@ local function FindChildText(parent, text)
 	end
 end
 
+local function FindButtonText(mock, text)
+	for _, frame in ipairs(mock.Frames) do
+		if frame.GetText and frame.Click and frame:GetText() == text then
+			return frame
+		end
+	end
+end
+
 fw.describe("MiniQueueTimer - config panel", function()
 	local context, panel
 
@@ -36,5 +44,26 @@ fw.describe("MiniQueueTimer - config panel", function()
 		-- The slider's min/max numbers sit below its own frame, so a single gap would still
 		-- crowd them; this stays doubled so the caption clears them.
 		fw.eq(y, -24, "the caption sits two gaps below the slider, not one")
+	end)
+
+	fw.it("replaces the hand-rolled reset button with the framework's", function()
+		fw.is_nil(FindChildText(panel, "Reset Defaults"), "the old button is gone")
+		fw.not_nil(FindChildText(panel, "Reset to Defaults"), "the framework's reset button is in its place")
+	end)
+
+	fw.it("asks before applying a reset, then restores the defaults through the addon", function()
+		context.Addon.db.FontSize = 40
+
+		local resetBtn = FindChildText(panel, "Reset to Defaults")
+		fw.not_nil(resetBtn, "fixture: the reset button is on the panel")
+
+		resetBtn:Click()
+		fw.eq(context.Addon.db.FontSize, 40, "the click only opened the confirmation")
+
+		local acceptBtn = FindButtonText(context.Mock, "Reset")
+		fw.not_nil(acceptBtn, "fixture: the confirmation dialog is showing")
+
+		acceptBtn:Click()
+		fw.eq(context.Addon.db.FontSize, context.Addon.dbDefaults.FontSize, "accepting applied the defaults")
 	end)
 end)

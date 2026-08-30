@@ -62,6 +62,12 @@ local function BuildContent(panel)
 	local header = mini:PanelHeader({
 		Parent = panel,
 		Description = "Shows how long you've been in the queue, and the estimated wait.",
+		Reset = {
+			OnAccept = function()
+				mini:ResetSavedVars(addon.dbDefaults)
+				addon:Refresh()
+			end,
+		},
 	})
 
 	-- Font
@@ -189,10 +195,10 @@ local function BuildContent(panel)
 	estLabel:SetPoint("TOPLEFT", queueBox, "BOTTOMLEFT", 0, -gap)
 	estBox:SetPoint("TOPLEFT", estLabel, "BOTTOMLEFT", 0, -4)
 
-	-- Preview / Reset
-	local previewBtn, RefreshPreviewBtn
+	-- Test
+	local testBtn, RefreshTestBtn
 
-	previewBtn = mini:Button({
+	testBtn = mini:Button({
 		Parent = panel,
 		Width = 120,
 		Height = 24,
@@ -200,31 +206,16 @@ local function BuildContent(panel)
 			if addon.SetTestMode then
 				addon.SetTestMode(not addon.IsTestMode())
 			end
-			RefreshPreviewBtn()
+			RefreshTestBtn()
 		end,
 	})
-	previewBtn:SetPoint("TOPLEFT", estBox, "BOTTOMLEFT", -3, -gap * 2)
+	testBtn:SetPoint("TOPLEFT", estBox, "BOTTOMLEFT", -3, -gap * 2)
 
-	RefreshPreviewBtn = function()
+	RefreshTestBtn = function()
 		local active = addon.IsTestMode and addon.IsTestMode()
-		previewBtn:SetText(active and "Preview: On" or "Preview: Off")
+		testBtn:SetText(active and "Test: On" or "Test: Off")
 	end
-	RefreshPreviewBtn()
-
-	local resetBtn = mini:Button({
-		Parent = panel,
-		Text = "Reset Defaults",
-		Width = 120,
-		Height = 24,
-		OnClick = function()
-			mini:ResetSavedVars(addon.dbDefaults)
-			addon:Refresh()
-			if panel.MiniRefresh then
-				panel:MiniRefresh()
-			end
-		end,
-	})
-	resetBtn:SetPoint("LEFT", previewBtn, "RIGHT", gap, 0)
+	RefreshTestBtn()
 end
 
 mini:WaitForAddonLoad(function()
