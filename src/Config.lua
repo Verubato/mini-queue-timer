@@ -1,4 +1,4 @@
-local _, addon = ...
+local addonName, addon = ...
 ---@type MiniFramework
 local mini = addon.Framework
 
@@ -27,27 +27,179 @@ local fontFlagNames = {
 	[""]         = "None",
 }
 
-local function GetFontLists()
-	local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+-- Preview rows sit in a menu, so they take the menu's own text size.
+local PREVIEW_FONT_SIZE = 13
+-- Only the client's own locale takes the configured file, so text in another script still
+-- renders from the game's files.
+local FAMILY_ALPHABETS = { "roman", "korean", "simplifiedchinese", "traditionalchinese", "russian" }
+local LOCALE_ALPHABETS = {
+	koKR = "korean",
+	zhCN = "simplifiedchinese",
+	zhTW = "traditionalchinese",
+	ruRU = "russian",
+}
+-- SetFont answers false for a file the client is still loading and leaves the object undefined
+-- for good, so these are built once through CreateFontFamily and never edited after.
+local previewFontObjects = {}
+local previewFontObjectCount = 0
 
-	if LSM then
-		local items = {}
-		local names = {}
+-- The dropdown holds these tables, so they are refilled in place rather than replaced.
+local fontItems = {}
+local fontNames = {}
+local fontPathDd
+local fontsMediaSubscribed = false
+local fontsRefreshQueued = false
 
-		for _, name in ipairs(LSM:List("font") or {}) do
-			local file = LSM:Fetch("font", name)
-			if file then
-				items[#items + 1] = file
-				names[file] = name
-			end
+---The family members for a file at a size: the file itself for the client's own locale, the
+---game's per-alphabet files for the rest.
+---@param file string
+---@param size number
+---@param flags string
+---@return table[] members
+local function FamilyMembers(file, size, flags)
+	local override = LOCALE_ALPHABETS[GetLocale()] or "roman"
+	local members = {}
+
+	for _, alphabet in ipairs(FAMILY_ALPHABETS) do
+		local memberFile = file
+
+		if alphabet ~= override and GameFontNormal and GameFontNormal.GetFontObjectForAlphabet then
+			local gameObject = GameFontNormal:GetFontObjectForAlphabet(alphabet)
+
+			memberFile = (gameObject and gameObject:GetFont()) or file
 		end
 
-		if #items > 0 then
-			return items, names
+		members[#members + 1] = {
+			alphabet = alphabet,
+			file = memberFile,
+			height = size,
+			flags = flags,
+		}
+	end
+
+	return members
+end
+
+---A font object wearing this file's own face, for a dropdown row that previews the font it names.
+---@param file string?
+---@return table? object nil when there is no file to preview
+local function PreviewFontObject(file)
+	if not file or file == "" then
+		return nil
+	end
+
+	local object = previewFontObjects[file]
+
+	if object then
+		return object
+	end
+
+	previewFontObjectCount = previewFontObjectCount + 1
+
+	local name = addonName .. "FontPreview" .. previewFontObjectCount
+
+	if CreateFontFamily then
+		object = CreateFontFamily(name, FamilyMembers(file, PREVIEW_FONT_SIZE, ""))
+	else
+		-- Only an old client gets here, where the two-step is all there is.
+		object = CreateFont(name)
+		object:SetFont(file, PREVIEW_FONT_SIZE, "")
+	end
+
+	previewFontObjects[file] = object
+
+	return object
+end
+
+---Each row previews the font it names. Menu rows are pooled, so the stock face is remembered
+---the first time a row comes through here and put back on a row that previews nothing.
+---@param button table
+---@param value string?
+local function DecorateFontRow(button, value)
+	local text = button.fontString
+
+	if not text then
+		return
+	end
+
+	if button.MiniQueueTimerStockFont == nil then
+		button.MiniQueueTimerStockFont = text:GetFontObject() or false
+	end
+
+	local preview = PreviewFontObject(value)
+
+	if preview then
+		text:SetFontObject(preview)
+	elseif button.MiniQueueTimerStockFont then
+		text:SetFontObject(button.MiniQueueTimerStockFont)
+	end
+end
+
+---Refills the font lists in place from LibSharedMedia, falling back to the client's own faces
+---only when nothing has registered anything at all.
+local function RefillFontLists()
+	wipe(fontItems)
+	wipe(fontNames)
+
+	local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+	-- Fetch answers one override file for every name once an addon sets a global font.
+	local hash = LSM and LSM:HashTable("font")
+
+	if hash then
+		for _, name in ipairs(LSM:List("font") or {}) do
+			local file = hash[name]
+
+			if file and not fontNames[file] then
+				fontItems[#fontItems + 1] = file
+				fontNames[file] = name
+			end
 		end
 	end
 
-	return builtinFontItems, builtinFontNames
+	if #fontItems == 0 then
+		for _, file in ipairs(builtinFontItems) do
+			fontItems[#fontItems + 1] = file
+			fontNames[file] = builtinFontNames[file]
+		end
+	end
+end
+
+---Runs the list refresh once at the end of the frame however many times it is asked for in one,
+---since LibSharedMedia fires once per registered entry and a media pack registers its whole set
+---inside a single frame.
+local function QueueFontListsChanged()
+	if fontsRefreshQueued then
+		return
+	end
+
+	fontsRefreshQueued = true
+
+	C_Timer.After(0, function()
+		fontsRefreshQueued = false
+		RefillFontLists()
+
+		if fontPathDd then
+			fontPathDd:MiniRefresh()
+		end
+	end)
+end
+
+---Fonts keep arriving for as long as media addons keep loading, which is routinely after this
+---panel was built.
+local function EnsureFontMediaSubscription()
+	if fontsMediaSubscribed then
+		return
+	end
+
+	local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+
+	if not LSM or not LSM.RegisterCallback then
+		return
+	end
+
+	fontsMediaSubscribed = true
+
+	LSM.RegisterCallback(addon, "LibSharedMedia_Registered", QueueFontListsChanged)
 end
 
 local function BuildContent(panel)
@@ -57,7 +209,8 @@ local function BuildContent(panel)
 	local db = addon.db
 	local gap = 12
 	local insetX = 16
-	local fontItems, fontNames = GetFontLists()
+
+	RefillFontLists()
 
 	local header = mini:PanelHeader({
 		Parent = panel,
@@ -77,17 +230,15 @@ local function BuildContent(panel)
 		},
 	})
 
-	-- Font
 	local fontDiv = mini:Divider({ Parent = panel, Text = "Font" })
 	fontDiv:SetPoint("TOPLEFT", header.Anchor, "BOTTOMLEFT", 0, -gap)
 	fontDiv:SetPoint("RIGHT", panel, "RIGHT", -insetX, 0)
 
-	-- Font path
 	local fontPathLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	fontPathLabel:SetText("Font")
 	fontPathLabel:SetPoint("TOPLEFT", fontDiv, "BOTTOMLEFT", 0, -gap)
 
-	local fontPathDd = mini:Dropdown({
+	fontPathDd = mini:Dropdown({
 		Parent = panel,
 		Items = fontItems,
 		GetValue = function() return db.FontPath end,
@@ -96,11 +247,13 @@ local function BuildContent(panel)
 			addon:Refresh()
 		end,
 		GetText = function(v) return fontNames[v] or v end,
+		DecorateItem = DecorateFontRow,
 	})
 	fontPathDd:SetPoint("TOPLEFT", fontPathLabel, "BOTTOMLEFT", 0, -4)
 	fontPathDd:SetWidth(240)
 
-	-- Font flags (same row, right of font path)
+	EnsureFontMediaSubscription()
+
 	local fontFlagsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	fontFlagsLabel:SetText("Outline")
 	fontFlagsLabel:SetPoint("TOP", fontPathLabel, "TOP", 0, 0)
@@ -119,7 +272,6 @@ local function BuildContent(panel)
 	fontFlagsDd:SetPoint("TOPLEFT", fontFlagsLabel, "BOTTOMLEFT", 0, -4)
 	fontFlagsDd:SetWidth(160)
 
-	-- Font size slider
 	-- M:Slider places its label 8px above the slider's top edge.
 	-- Offset = gap(12) + label_height(16) + label_gap(8) = 36px below the font row.
 	local sizeResult = mini:Slider({
@@ -137,7 +289,6 @@ local function BuildContent(panel)
 	})
 	sizeResult.Slider:SetPoint("TOPLEFT", fontPathDd, "BOTTOMLEFT", 0, -36)
 
-	-- Font colour
 	local colorLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	colorLabel:SetText("Font Colour")
 	-- The slider's min/max numbers sit below its own frame, so a single gap crowds them.
@@ -165,12 +316,10 @@ local function BuildContent(panel)
 	colorHint:SetTextColor(0.6, 0.6, 0.6, 1)
 	colorHint:SetPoint("LEFT", colorBtn, "RIGHT", 6, 0)
 
-	-- Text
 	local textDiv = mini:Divider({ Parent = panel, Text = "Text" })
 	textDiv:SetPoint("TOPLEFT", colorLabel, "BOTTOMLEFT", 0, -gap)
 	textDiv:SetPoint("RIGHT", fontDiv, "RIGHT", 0, 0)
 
-	-- Queue format
 	local queueEdit = mini:EditBox({
 		Parent = panel,
 		LabelText = "Queue Text",
@@ -188,7 +337,6 @@ local function BuildContent(panel)
 	-- lines its visible left edge up with the label above it.
 	queueBox:SetPoint("TOPLEFT", queueLabel, "BOTTOMLEFT", 4, -4)
 
-	-- Estimated format
 	local estEdit = mini:EditBox({
 		Parent = panel,
 		LabelText = "Estimated Text",
