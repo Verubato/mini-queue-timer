@@ -13,12 +13,26 @@ local function FindChildText(parent, text)
 	end
 end
 
-local function FindButtonText(mock, text)
-	for _, frame in ipairs(mock.Frames) do
-		if frame.GetText and frame.Click and frame:GetText() == text then
-			return frame
-		end
+---The client does nothing with a prompt in the mock, so a test stands in for it.
+---@param open fun()
+---@return table
+local function CaptureConfirm(open)
+	local seen = {}
+	local real = StaticPopup_Show
+
+	StaticPopup_Show = function(which, _, _, data)
+		seen.Which, seen.Data = which, data
 	end
+
+	local ok, err = pcall(open)
+
+	StaticPopup_Show = real
+
+	if not ok then
+		error(err, 0)
+	end
+
+	return seen
 end
 
 fw.describe("MiniQueueTimer - config panel", function()
@@ -57,13 +71,15 @@ fw.describe("MiniQueueTimer - config panel", function()
 		local resetBtn = FindChildText(panel, "Reset to Defaults")
 		fw.not_nil(resetBtn, "fixture: the reset button is on the panel")
 
-		resetBtn:Click()
+		local seen = CaptureConfirm(function()
+			resetBtn:Click()
+		end)
+
+		fw.not_nil(seen.Which, "fixture: the confirmation dialog is showing")
 		fw.eq(context.Addon.db.FontSize, 40, "the click only opened the confirmation")
 
-		local acceptBtn = FindButtonText(context.Mock, "Reset")
-		fw.not_nil(acceptBtn, "fixture: the confirmation dialog is showing")
+		StaticPopupDialogs[seen.Which].OnAccept(nil, seen.Data)
 
-		acceptBtn:Click()
 		fw.eq(context.Addon.db.FontSize, context.Addon.dbDefaults.FontSize, "accepting applied the defaults")
 	end)
 
